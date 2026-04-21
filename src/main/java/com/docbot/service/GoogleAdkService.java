@@ -43,7 +43,7 @@ public class GoogleAdkService {
 
             // Build user message with the extracted text
             Content userMessage = Content.fromParts(
-                    Part.fromText("Process and summarize the following document content:\n\n" + extractedText)
+                    Part.fromText(extractedText)
             );
 
             // Run the agent and collect response
