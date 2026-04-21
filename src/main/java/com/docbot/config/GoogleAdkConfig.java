@@ -20,12 +20,7 @@ public class GoogleAdkConfig {
         return LlmAgent.builder()
                 .name("document_processor")
                 .model(Gemini.builder().modelName(modelName).apiKey(apiKey).build())
-                .instruction("""
-                    You are a helpful document assistant. You are given the content of an uploaded document
-                    and a user's question about it. Read through the document content carefully and answer
-                    the user's question in plain, natural language. Do not return JSON or structured data
-                    unless the user specifically asks for it.
-                """)
+                .instruction("Answer the user's question based on the provided document. Be concise. Plain text only unless asked otherwise.")
                 .description("Processes uploaded document content using Google Gemini")
                 .build();
     }

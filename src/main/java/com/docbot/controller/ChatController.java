@@ -46,15 +46,12 @@ public class ChatController {
             return ResponseEntity.notFound().build();
         }
 
-        // Build context-aware prompt with the extracted document content
-        String contextPrompt = "Based on the following document content:\n\n"
-                + file.getExtractedText()
-                + "\n\nUser question: " + message;
+        // Build concise prompt to reduce token usage
+        String contextPrompt = "Document:\n" + file.getExtractedText() + "\n\nQ: " + message;
+        log.info("Context prompt: {}", contextPrompt);
 
-        log.info("[Extracted Text " + file.getExtractedText() + "]");
         String adkResponse = googleAdkService.processDocumentContent(fileId, contextPrompt);
-        // String adkResponse = "[Simulated ADK response for fileId=" + fileId + "" + " and message=\"" + message + "\"]";
-        log.info("[Simulated ADK response for fileId=" + fileId + "" + " and adkResponse=\"" + adkResponse + "\"]");
+        log.info("Chat fileId={}, responseLength={}", fileId, adkResponse.length());
 
         // Store in chat history
         chatHistory.computeIfAbsent(fileId, k -> new ArrayList<>());
