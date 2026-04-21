@@ -46,15 +46,15 @@ public class ChatController {
             return ResponseEntity.notFound().build();
         }
 
-        // Extract text from S3 on demand
-        String extractedText = fileStorageService.extractTextFromS3(file.getS3Key());
-
-        // Build context-aware prompt with the document content
+        // Build context-aware prompt with the extracted document content
         String contextPrompt = "Based on the following document content:\n\n"
-                + extractedText
+                + file.getExtractedText()
                 + "\n\nUser question: " + message;
 
+        log.info("[Extracted Text " + file.getExtractedText() + "]");
         String adkResponse = googleAdkService.processDocumentContent(fileId, contextPrompt);
+        // String adkResponse = "[Simulated ADK response for fileId=" + fileId + "" + " and message=\"" + message + "\"]";
+        log.info("[Simulated ADK response for fileId=" + fileId + "" + " and adkResponse=\"" + adkResponse + "\"]");
 
         // Store in chat history
         chatHistory.computeIfAbsent(fileId, k -> new ArrayList<>());
