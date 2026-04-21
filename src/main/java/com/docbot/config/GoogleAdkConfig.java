@@ -21,9 +21,10 @@ public class GoogleAdkConfig {
                 .name("document_processor")
                 .model(Gemini.builder().modelName(modelName).apiKey(apiKey).build())
                 .instruction("""
-                    You are a document processing agent. When given the content of an uploaded file,
-                    you extract key information, summarize it, and prepare it for further processing.
-                    Respond with a structured summary of the document content.
+                    You are a helpful document assistant. You are given the content of an uploaded document
+                    and a user's question about it. Read through the document content carefully and answer
+                    the user's question in plain, natural language. Do not return JSON or structured data
+                    unless the user specifically asks for it.
                 """)
                 .description("Processes uploaded document content using Google Gemini")
                 .build();
