@@ -8,6 +8,7 @@ import com.google.adk.artifacts.InMemoryArtifactService;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
 import io.reactivex.rxjava3.core.Flowable;
+import java.nio.charset.StandardCharsets;
 import com.google.adk.events.Event;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +69,16 @@ public class GoogleAdkService {
                 }
             });
 
-            log.info("ADK processed document for fileId={}, responseLength={}", fileId, response.length());
+            // Compute several length metrics to help track model consumption:
+            String responseStr = response.toString();
+            int utf16Length = response.length(); // Java char (UTF-16 code units)
+            int codePointCount = responseStr.codePointCount(0, utf16Length); // Unicode code points
+            int utf8Bytes = responseStr.getBytes(StandardCharsets.UTF_8).length; // bytes in UTF-8
+            // Heuristic token estimate: ~1 token per 4 UTF-8 bytes (rough approximation). Replace with a real tokenizer for accuracy.
+            int estimatedTokens = (int) Math.ceil(utf8Bytes / 4.0);
+
+            log.info("ADK processed document for fileId={}, responseLength_utf16={}, codePoints={}, utf8Bytes={}, estimatedTokens={}",
+                    fileId, utf16Length, codePointCount, utf8Bytes, estimatedTokens);
             return response.toString();
 
         } catch (Exception e) {

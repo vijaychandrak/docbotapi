@@ -28,25 +28,40 @@ public class FileController {
 
     /**
      * Upload a file — extracts content and stores it.
-     * Matches: POST /api/files/upload  (multipart form with field "file")
+     * <p>
+     * Endpoint: POST /api/files/upload (multipart form with field "file" and "userId")
+     * <p>
+     * Possible responses:
+     * - 200 OK — file processed successfully, returns {@link com.docbot.dto.UploadedFileResponse}
+     * - 400 Bad Request — missing/empty file, missing userId, or malformed UUID for userId. Body is JSON:
+     *   { timestamp, status:400, error:"Bad Request", message, path }
+     * - 404 Not Found — user not found (valid UUID but no matching user). Body is JSON:
+     *   { timestamp, status:404, error:"Not Found", message, path }
+     * - 500 Internal Server Error — unexpected server error. Body is JSON:
+     *   { timestamp, status:500, error:"Internal Server Error", message, path }
+     *
+     * Note: the service extracts text using Apache Tika and stores metadata in the database. S3 upload is
+     * currently a placeholder and will return a generated S3 key.
      */
     @PostMapping("/upload")
-    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file,
-                                        @RequestParam("userId") String userId) {
+    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("message", "File is empty"));
         }
-        if (userId == null || userId.isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("message", "userId is required"));
+
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Unauthorized"));
         }
 
-        try {
-            // Store file and extract content
-            UploadedFile uploaded = fileStorageService.storeFile(file, userId);
+        String username = auth.getName();
 
-            log.info("File uploaded: id={}, name={}, userId={}", uploaded.getId(), uploaded.getFileName(), uploaded.getUserId());
+        try {
+            // Store file and extract content linked to authenticated user
+            UploadedFile uploaded = fileStorageService.storeFileForUsername(file, username);
+
+            log.info("File uploaded: id={}, name={}, username={}", uploaded.getId(), uploaded.getFileName(), uploaded.getUserId());
 
             // Return response matching Angular UploadedFile model
             UploadedFileResponse response = fileStorageService.toResponse(uploaded);
@@ -57,6 +72,23 @@ public class FileController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "File upload failed: " + e.getMessage()));
         }
+    }
+
+    /**
+     * List files for the currently authenticated user.
+     * Matches: GET /api/files/me
+     */
+    @GetMapping("/me")
+    public ResponseEntity<List<UploadedFileResponse>> getFilesForCurrentUser() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String username = auth.getName();
+        List<UploadedFileResponse> files = fileStorageService.getFilesByUserId(username).stream()
+                .map(fileStorageService::toResponse)
+                .toList();
+        return ResponseEntity.ok(files);
     }
 
     /**

@@ -4,7 +4,7 @@ import com.docbot.dto.AuthRequest;
 import com.docbot.dto.AuthResponse;
 import com.docbot.dto.RegisterRequest;
 import com.docbot.model.User;
-import com.docbot.repository.InMemoryUserRepository;
+import com.docbot.repository.UserRepository;
 import com.docbot.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,16 +25,18 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final JwtUtil jwtUtil;
-    private final InMemoryUserRepository userRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request) {
         try {
             // Resolve username from email if needed
-            String username = userRepository.findByUsernameOrEmail(request.getUsername())
+            String username = userRepository.findByUsername(request.getUsername())
                     .map(User::getUsername)
-                    .orElse(request.getUsername());
+                    .orElse(userRepository.findByEmail(request.getUsername())
+                            .map(User::getUsername)
+                            .orElse(request.getUsername()));
 
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, request.getPassword())
